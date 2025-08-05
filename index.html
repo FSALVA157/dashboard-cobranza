@@ -590,6 +590,13 @@
 
         function configureWorkflow(type) {
             showNotification(`⚙️ Abriendo configuración para flujo ${type}`);
+            if(type === 'email') {
+                window.open('https://wf.griftin.com.ar/workflow/qVmZMvRfN1N5e9vJ', '_blank');
+            } else if (type === 'telegram') {
+                window.open('https://wf.griftin.com.ar/workflow/yY0FuJ1ks3iY7rI8', '_blank');
+            } else if (type === 'chat') {
+                window.open('https://wf.griftin.com.ar/workflow/rjSeb6fFVp3OrYui', '_blank');
+            }
             // Aquí se abriría un modal de configuración o navegaría a n8n
         }
 
