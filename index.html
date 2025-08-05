@@ -601,13 +601,14 @@
         }
 
         function showLogs(type) {
-            const logsPanel = document.getElementById(type + 'Logs');
-            if (logsPanel.style.display === 'none') {
-                logsPanel.style.display = 'block';
-                showNotification(`📊 Mostrando logs de ${type}`);
-            } else {
-                logsPanel.style.display = 'none';
-            }
+            window.open('https://docs.google.com/spreadsheets/d/1KqsYFI5J0DJSsPM6Yvy4xLImKIkgeX08pj6Zrmdb_u0/edit?usp=sharing', '_blank');
+            // const logsPanel = document.getElementById(type + 'Logs');
+            // if (logsPanel.style.display === 'none') {
+            //     logsPanel.style.display = 'block';
+            //     showNotification(`📊 Mostrando logs de ${type}`);
+            // } else {
+            //     logsPanel.style.display = 'none';
+            // }
         }
 
         function showNotification(message) {
