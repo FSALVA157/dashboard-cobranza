@@ -1,0 +1,216 @@
+{
+  "name": "Evaluador de Planes Financieros",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evaluar-plan",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-entrada",
+      "name": "Webhook - Entrada Cliente",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "evaluar-plan-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar y estructurar datos del cliente\nconst clienteData = $input.first().json;\n\n// Validaciones básicas\nif (!clienteData.ingresoNeto || !clienteData.tipoProducto) {\n  throw new Error('Faltan datos obligatorios: ingresoNeto, tipoProducto');\n}\n\n// Estructura normalizada del cliente\nconst cliente = {\n  // Datos básicos\n  ingresoNeto: clienteData.ingresoNeto || 0,\n  tipoProducto: clienteData.tipoProducto || 'auto', // auto, inmueble, seguro\n  montoSolicitado: clienteData.montoSolicitado || 0,\n  \n  // Perfil crediticio\n  scoring: clienteData.scoring || 600,\n  antiguedadLaboral: clienteData.antiguedadLaboral || 12,\n  deudaActual: clienteData.deudaActual || 0,\n  \n  // Preferencias\n  tasaMaxima: clienteData.tasaMaxima || 50,\n  plazoMaximo: clienteData.plazoMaximo || 60,\n  cuotaMaxima: clienteData.cuotaMaxima || clienteData.ingresoNeto * 0.35,\n  \n  // Metadata\n  vendedor: clienteData.vendedor || 'sistema',\n  timestamp: new Date().toISOString()\n};\n\nreturn { cliente };"
+      },
+      "id": "validar-cliente",
+      "name": "Validar y Normalizar Cliente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simular obtención de planes desde múltiples fuentes\n// En producción, estos serían HTTP Requests a APIs reales\n\nconst cliente = $input.first().json.cliente;\nconst tipoProducto = cliente.tipoProducto;\n\n// Base de datos mock de planes\nconst planesDisponibles = {\n  auto: [\n    {\n      id: 'banco_a_auto_1',\n      entidad: 'Banco A',\n      producto: 'Crédito Automotor Clásico',\n      tasa: 42.5,\n      plazoMinimo: 12,\n      plazoMaximo: 84,\n      montoMinimo: 500000,\n      montoMaximo: 8000000,\n      requisitos: {\n        scoringMinimo: 550,\n        antiguedadMinima: 6,\n        ingresoMinimo: 80000\n      },\n      beneficios: ['Seguro incluido', 'Sin gastos administrativos'],\n      comisiones: {\n        apertura: 1.5,\n        mantenimiento: 0\n      }\n    },\n    {\n      id: 'banco_b_auto_1',\n      entidad: 'Banco B',\n      producto: 'Auto Fácil',\n      tasa: 38.9,\n      plazoMinimo: 12,\n      plazoMaximo: 72,\n      montoMinimo: 300000,\n      montoMaximo: 6000000,\n      requisitos: {\n        scoringMinimo: 600,\n        antiguedadMinima: 12,\n        ingresoMinimo: 100000\n      },\n      beneficios: ['Tasa fija', 'Pre-aprobación rápida'],\n      comisiones: {\n        apertura: 2.0,\n        mantenimiento: 150\n      }\n    },\n    {\n      id: 'financiera_a_auto_1',\n      entidad: 'Financiera A',\n      producto: 'Crédito Automotor Express',\n      tasa: 48.0,\n      plazoMinimo: 6,\n      plazoMaximo: 60,\n      montoMinimo: 200000,\n      montoMaximo: 5000000,\n      requisitos: {\n        scoringMinimo: 500,\n        antiguedadMinima: 3,\n        ingresoMinimo: 60000\n      },\n      beneficios: ['Aprobación inmediata', 'Menos requisitos'],\n      comisiones: {\n        apertura: 3.0,\n        mantenimiento: 200\n      }\n    }\n  ],\n  inmueble: [\n    {\n      id: 'banco_a_hipoteca_1',\n      entidad: 'Banco A',\n      producto: 'Crédito Hipotecario Tradicional',\n      tasa: 35.0,\n      plazoMinimo: 60,\n      plazoMaximo: 360,\n      montoMinimo: 2000000,\n      montoMaximo: 50000000,\n      requisitos: {\n        scoringMinimo: 650,\n        antiguedadMinima: 24,\n        ingresoMinimo: 200000\n      },\n      beneficios: ['Tasa preferencial', 'Seguro de vida incluido'],\n      comisiones: {\n        apertura: 1.0,\n        mantenimiento: 0\n      }\n    },\n    {\n      id: 'banco_c_hipoteca_1',\n      entidad: 'Banco C',\n      producto: 'Mi Primera Casa',\n      tasa: 32.5,\n      plazoMinimo: 120,\n      plazoMaximo: 300,\n      montoMinimo: 1500000,\n      montoMaximo: 30000000,\n      requisitos: {\n        scoringMinimo: 700,\n        antiguedadMinima: 36,\n        ingresoMinimo: 250000\n      },\n      beneficios: ['Tasa promocional', 'Sin gastos de tasación'],\n      comisiones: {\n        apertura: 0.5,\n        mantenimiento: 100\n      }\n    }\n  ],\n  seguro: [\n    {\n      id: 'seguradora_a_auto_1',\n      entidad: 'Seguradora A',\n      producto: 'Seguro Auto Completo',\n      tasa: 0, // Los seguros no tienen tasa, pero usamos para premio anual\n      premio_anual: 45000,\n      cobertura: 'Todo Riesgo',\n      franquicia: 15000,\n      requisitos: {\n        antiguedadVehiculo: 10,\n        valorMinimo: 500000\n      },\n      beneficios: ['Auxilio mecánico', 'Auto sustituto', 'Cristales bonificados'],\n      descuentos: {\n        sinSiniestros: 10,\n        alarma: 5,\n        garage: 3\n      }\n    },\n    {\n      id: 'seguradora_b_auto_1',\n      entidad: 'Seguradora B',\n      producto: 'Seguro Auto Básico',\n      tasa: 0,\n      premio_anual: 32000,\n      cobertura: 'Terceros Completo',\n      franquicia: 0,\n      requisitos: {\n        antiguedadVehiculo: 15,\n        valorMinimo: 200000\n      },\n      beneficios: ['Responsabilidad civil', 'Robo total'],\n      descuentos: {\n        sinSiniestros: 15,\n        alarma: 3\n      }\n    }\n  ]\n};\n\nconst planes = planesDisponibles[tipoProducto] || [];\n\nreturn planes.map(plan => ({ \n  ...plan,\n  fechaConsulta: new Date().toISOString(),\n  cliente: cliente\n}));"
+      },
+      "id": "obtener-planes",
+      "name": "Obtener Planes Disponibles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Motor de evaluación y scoring de planes\nconst items = $input.all();\nconst planesEvaluados = [];\n\nfor (const item of items) {\n  const plan = item.json;\n  const cliente = plan.cliente;\n  \n  // Aplicar filtros básicos (requisitos mínimos)\n  let cumpleRequisitos = true;\n  let razonRechazo = [];\n  \n  if (plan.requisitos) {\n    if (cliente.scoring < plan.requisitos.scoringMinimo) {\n      cumpleRequisitos = false;\n      razonRechazo.push(`Scoring insuficiente (${cliente.scoring} < ${plan.requisitos.scoringMinimo})`);\n    }\n    \n    if (cliente.antiguedadLaboral < plan.requisitos.antiguedadMinima) {\n      cumpleRequisitos = false;\n      razonRechazo.push(`Antigüedad laboral insuficiente (${cliente.antiguedadLaboral} < ${plan.requisitos.antiguedadMinima} meses)`);\n    }\n    \n    if (cliente.ingresoNeto < plan.requisitos.ingresoMinimo) {\n      cumpleRequisitos = false;\n      razonRechazo.push(`Ingreso insuficiente (${cliente.ingresoNeto} < ${plan.requisitos.ingresoMinimo})`);\n    }\n    \n    if (cliente.montoSolicitado > plan.montoMaximo) {\n      cumpleRequisitos = false;\n      razonRechazo.push(`Monto excede límite (${cliente.montoSolicitado} > ${plan.montoMaximo})`);\n    }\n    \n    if (cliente.montoSolicitado < plan.montoMinimo) {\n      cumpleRequisitos = false;\n      razonRechazo.push(`Monto por debajo del mínimo (${cliente.montoSolicitado} < ${plan.montoMinimo})`);\n    }\n  }\n  \n  if (!cumpleRequisitos) {\n    planesEvaluados.push({\n      ...plan,\n      apto: false,\n      score: 0,\n      razonRechazo: razonRechazo,\n      evaluacion: {\n        cumpleRequisitos: false,\n        cuotaEstimada: 0,\n        costoTotal: 0\n      }\n    });\n    continue;\n  }\n  \n  // Calcular cuota estimada y costo total\n  let cuotaEstimada = 0;\n  let costoTotal = 0;\n  \n  if (cliente.tipoProducto === 'seguro') {\n    cuotaEstimada = plan.premio_anual / 12;\n    costoTotal = plan.premio_anual;\n    \n    // Aplicar descuentos\n    if (plan.descuentos) {\n      let descuentoTotal = 0;\n      Object.values(plan.descuentos).forEach(desc => descuentoTotal += desc);\n      cuotaEstimada = cuotaEstimada * (1 - descuentoTotal / 100);\n      costoTotal = costoTotal * (1 - descuentoTotal / 100);\n    }\n  } else {\n    // Créditos (auto, inmueble)\n    const plazoMeses = Math.min(cliente.plazoMaximo, plan.plazoMaximo);\n    const tasaMensual = plan.tasa / 100 / 12;\n    const monto = cliente.montoSolicitado;\n    \n    // Fórmula de cuota francesa\n    cuotaEstimada = monto * (tasaMensual * Math.pow(1 + tasaMensual, plazoMeses)) / \n                   (Math.pow(1 + tasaMensual, plazoMeses) - 1);\n    \n    costoTotal = cuotaEstimada * plazoMeses;\n    \n    // Agregar comisiones\n    if (plan.comisiones) {\n      costoTotal += monto * (plan.comisiones.apertura / 100);\n      costoTotal += plan.comisiones.mantenimiento * plazoMeses;\n    }\n  }\n  \n  // Sistema de scoring (0-100)\n  let score = 0;\n  \n  // Factor 1: Cuota vs capacidad de pago (30 puntos)\n  const ratioCapacidad = cuotaEstimada / cliente.cuotaMaxima;\n  if (ratioCapacidad <= 0.7) score += 30;\n  else if (ratioCapacidad <= 0.85) score += 20;\n  else if (ratioCapacidad <= 1.0) score += 10;\n  \n  // Factor 2: Tasa competitiva (25 puntos)\n  if (cliente.tipoProducto !== 'seguro') {\n    if (plan.tasa <= cliente.tasaMaxima * 0.8) score += 25;\n    else if (plan.tasa <= cliente.tasaMaxima * 0.9) score += 20;\n    else if (plan.tasa <= cliente.tasaMaxima) score += 10;\n  } else {\n    // Para seguros, evaluar precio competitivo\n    if (cuotaEstimada <= cliente.cuotaMaxima * 0.8) score += 25;\n    else if (cuotaEstimada <= cliente.cuotaMaxima * 0.9) score += 20;\n    else if (cuotaEstimada <= cliente.cuotaMaxima) score += 10;\n  }\n  \n  // Factor 3: Beneficios (20 puntos)\n  score += Math.min(plan.beneficios.length * 4, 20);\n  \n  // Factor 4: Reputación de la entidad (15 puntos)\n  const entidadesPreferidas = ['Banco A', 'Banco B', 'Seguradora A'];\n  if (entidadesPreferidas.includes(plan.entidad)) score += 15;\n  else score += 8;\n  \n  // Factor 5: Condiciones flexibles (10 puntos)\n  if (cliente.tipoProducto !== 'seguro') {\n    if (plan.plazoMaximo >= 60) score += 5;\n    if (plan.comisiones && plan.comisiones.mantenimiento === 0) score += 5;\n  } else {\n    if (plan.franquicia === 0) score += 5;\n    if (plan.descuentos && Object.keys(plan.descuentos).length > 2) score += 5;\n  }\n  \n  planesEvaluados.push({\n    ...plan,\n    apto: true,\n    score: Math.round(score),\n    razonRechazo: [],\n    evaluacion: {\n      cumpleRequisitos: true,\n      cuotaEstimada: Math.round(cuotaEstimada),\n      costoTotal: Math.round(costoTotal),\n      plazoRecomendado: cliente.tipoProducto !== 'seguro' ? \n        Math.min(cliente.plazoMaximo, plan.plazoMaximo) : 12,\n      ratioCapacidad: Math.round(ratioCapacidad * 100) / 100\n    }\n  });\n}\n\n// Ordenar por score descendente\nplanesEvaluados.sort((a, b) => b.score - a.score);\n\nreturn planesEvaluados;"
+      },
+      "id": "evaluar-planes",
+      "name": "Evaluar y Puntuar Planes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar respuesta estructurada con recomendaciones\nconst planes = $input.all().map(item => item.json);\nconst cliente = planes[0]?.cliente;\n\nif (!cliente) {\n  return [{ json: { error: 'No se encontraron datos del cliente' } }];\n}\n\n// Filtrar planes aptos\nconst planesAptos = planes.filter(p => p.apto);\nconst planesRechazados = planes.filter(p => !p.apto);\n\n// Preparar respuesta\nconst respuesta = {\n  consulta: {\n    timestamp: new Date().toISOString(),\n    cliente: {\n      tipoProducto: cliente.tipoProducto,\n      montoSolicitado: cliente.montoSolicitado,\n      ingresoNeto: cliente.ingresoNeto,\n      scoring: cliente.scoring\n    }\n  },\n  \n  resumen: {\n    totalPlanesEvaluados: planes.length,\n    planesAptos: planesAptos.length,\n    planesRechazados: planesRechazados.length,\n    mejorOpcion: planesAptos.length > 0 ? planesAptos[0].id : null\n  },\n  \n  recomendaciones: planesAptos.slice(0, 3).map((plan, index) => ({\n    ranking: index + 1,\n    id: plan.id,\n    entidad: plan.entidad,\n    producto: plan.producto,\n    score: plan.score,\n    \n    condiciones: cliente.tipoProducto === 'seguro' ? {\n      premioAnual: plan.premio_anual,\n      cuotaMensual: plan.evaluacion.cuotaEstimada,\n      cobertura: plan.cobertura,\n      franquicia: plan.franquicia\n    } : {\n      tasa: plan.tasa + '%',\n      cuotaEstimada: plan.evaluacion.cuotaEstimada,\n      plazoRecomendado: plan.evaluacion.plazoRecomendado + ' meses',\n      costoTotal: plan.evaluacion.costoTotal\n    },\n    \n    beneficios: plan.beneficios,\n    \n    evaluacion: {\n      capacidadPago: plan.evaluacion.ratioCapacidad <= 1 ? 'Adecuada' : 'Ajustada',\n      competitividad: plan.score >= 70 ? 'Muy buena' : plan.score >= 50 ? 'Buena' : 'Regular',\n      recomendacion: index === 0 ? 'RECOMENDADO' : 'Alternativa ' + (index + 1)\n    }\n  })),\n  \n  alternativasDescartadas: planesRechazados.map(plan => ({\n    entidad: plan.entidad,\n    producto: plan.producto,\n    motivosRechazo: plan.razonRechazo\n  })),\n  \n  proximosPasos: {\n    accionRecomendada: planesAptos.length > 0 ? \n      'Contactar con ' + planesAptos[0].entidad + ' para iniciar proceso' :\n      'Mejorar perfil crediticio o ajustar parámetros de búsqueda',\n    documentosNecesarios: [\n      'DNI y CUIL',\n      'Últimos 3 recibos de sueldo',\n      'Resumen de cuenta bancaria (3 meses)',\n      'Informe de Veraz'\n    ],\n    tiempoEstimadoAprobacion: '5-10 días hábiles'\n  }\n};\n\nreturn [{ json: respuesta }];"
+      },
+      "id": "generar-respuesta",
+      "name": "Generar Respuesta Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "response-node",
+      "name": "HTTP Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.resumen.planesAptos }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "condition-planes-aptos",
+      "name": "¿Hay Planes Aptos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 480]
+    },
+    {
+      "parameters": {
+        "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"text\": \"🎯 Nueva consulta de financiación\", \"blocks\": [{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Cliente:* {{ $node['Validar y Normalizar Cliente'].json.cliente.vendedor }}\\n*Producto:* {{ $json.consulta.cliente.tipoProducto }}\\n*Monto:* ${{ $json.consulta.cliente.montoSolicitado }}\\n*Mejor opción:* {{ $json.recomendaciones[0].entidad }} - {{ $json.recomendaciones[0].producto }}\"}}]}",
+        "options": {}
+      },
+      "id": "notificar-slack",
+      "name": "Notificar a Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 420]
+    },
+    {
+      "parameters": {
+        "url": "mailto:ventas@empresa.com",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"to\": \"{{ $node['Validar y Normalizar Cliente'].json.cliente.vendedor }}@empresa.com\", \"subject\": \"⚠️ Consulta sin opciones viables\", \"body\": \"El cliente no califica para ningún plan disponible.\\nDetalles: {{ $json.consulta.cliente }}\\nMotivos: {{ $json.alternativasDescartadas }}\"}",
+        "options": {}
+      },
+      "id": "email-sin-opciones",
+      "name": "Email - Sin Opciones",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 540]
+    }
+  ],
+  "connections": {
+    "Webhook - Entrada Cliente": {
+      "main": [
+        [
+          {
+            "node": "Validar y Normalizar Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y Normalizar Cliente": {
+      "main": [
+        [
+          {
+            "node": "Obtener Planes Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Planes Disponibles": {
+      "main": [
+        [
+          {
+            "node": "Evaluar y Puntuar Planes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar y Puntuar Planes": {
+      "main": [
+        [
+          {
+            "node": "Generar Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Respuesta Final": {
+      "main": [
+        [
+          {
+            "node": "HTTP Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "¿Hay Planes Aptos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Planes Aptos?": {
+      "main": [
+        [
+          {
+            "node": "Notificar a Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email - Sin Opciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
